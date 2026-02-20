@@ -475,6 +475,16 @@ let usersPage = 0; // 유저 목록 페이지(10명 단위)
     // UI helpers
     // reusing global $ helper
     const esc = (s)=>String(s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+
+    // CSS.escape 대체(일부 브라우저/환경에서 CSS.escape 미존재 시 대비)
+    const cssEsc = (v)=>{
+      const s = String(v ?? "");
+      try{
+        if (window.CSS && typeof CSS.escape === "function") return CSS.escape(s);
+      }catch(_){}
+      // fallback: attribute/class selector에서 깨질 수 있는 문자를 백슬래시 이스케이프
+      return s.replace(/[^a-zA-Z0-9_\-]/g, (ch)=>"\"+ch);
+    };
     const setStatus=(msg)=>{ const el=qs("status"); if(!el) return; el.textContent=msg||""; if(msg) setTimeout(()=>{el.textContent="";},1200); };
 
     const hardHide = (id)=>{
