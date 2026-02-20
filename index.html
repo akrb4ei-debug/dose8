@@ -802,7 +802,8 @@ async function openUserModal(uid){
           if(act==="forceout") return adminForceOut(uid);
           if(act==="toggleadmin"){
             const u=usersCache.get(uid); if(!u) return;
-            await updateDoc(doc(db,"users",uid),{isAdmin:!u.isAdmin});
+            try{ await updateDoc(doc(db,"users",uid),{isAdmin:!u.isAdmin}); }
+            catch(e){ console.error("[toggleadmin] failed",e); toast(`변경 실패: ${e?.code||e?.message||e}`,"bad","관리"); return; }
             toast("관리자 권한이 변경되었습니다.","good","관리");
             await loadUsersOnce({force:true, reason:"admin"});
             await loadUserTable();
@@ -811,7 +812,8 @@ async function openUserModal(uid){
           }
           if(act==="togglehidden"){
             const u=usersCache.get(uid); if(!u) return;
-            await updateDoc(doc(db,"users",uid),{isHidden:!u.isHidden});
+            try{ await updateDoc(doc(db,"users",uid),{isHidden:!u.isHidden, hidden:!u.isHidden}); }
+            catch(e){ console.error("[togglehidden] failed",e); toast(`변경 실패: ${e?.code||e?.message||e}`,"bad","관리"); return; }
             toast("숨김 상태가 변경되었습니다.","good","관리");
             await loadUsersOnce({force:true, reason:"admin"});
             await loadUserTable();
@@ -821,7 +823,8 @@ async function openUserModal(uid){
           if(act==="pw"){
             const np=prompt("새 비밀번호를 입력해 주세요.");
             if(!np) return;
-            await updateDoc(doc(db,"users",uid),{password:String(np)});
+            try{ await updateDoc(doc(db,"users",uid),{password:String(np)}); }
+            catch(e){ console.error("[pw] failed",e); toast(`변경 실패: ${e?.code||e?.message||e}`,"bad","관리"); return; }
             toast("비밀번호가 변경되었습니다.","good","관리");
             await loadUsersOnce({force:true, reason:"admin"});
             await renderAdminUserCards();
@@ -2087,6 +2090,7 @@ function renderContentTimeline(){
       await setDoc(doc(db,"users",id),{
         password: pw,
         isAdmin:false,
+        hidden:false,
         isHidden:false,
         rank:"",
         department:"",
@@ -2236,13 +2240,21 @@ function renderContentTimeline(){
       const pwEl = qs("adminUserCards").querySelector(`input[data-pw="${cssEsc(id)}"]`);
       const pw = (pwEl?.value||"").trim();
 
-      const updates={ isAdmin:isA, isHidden:isH, rank, department:dept };
+      const updates={ isAdmin:isA, hidden:isH, isHidden:isH, rank, department:dept };
       if(pw) updates.password=pw;
 
-      await updateDoc(doc(db,"users",id), updates);
+      try{
+        await updateDoc(doc(db,"users",id), updates);
+      }catch(e){
+        console.error("[adminSaveUser] update failed", e);
+        toast(`저장 실패: ${e?.code||e?.message||e}`,"bad","관리");
+        return;
+      }
       if(pwEl) pwEl.value="";
       toast("저장 완료","good","관리",1800,"admin_saved"); toast("유저 설정이 저장되었습니다.","good","관리"); setStatus("저장 완료");
       await loadUsersOnce({force:true, reason:"admin"});
+      // 내가 수정된 경우(계급/부서 변경 등) 즉시 반영
+      try{ if(id===currentUser){ currentUserData = normalizeUser(usersCache.get(currentUser)||currentUserData||{}); } }catch(e){}
       await loadDashKpis();
       await loadUserTable();
       await renderAdminUserCards();
@@ -2256,7 +2268,13 @@ function renderContentTimeline(){
       const raw=(el?.value||"").trim();
       const arr=raw?raw.split(",").map(s=>s.trim()).filter(Boolean):[];
       // 없는 부서 입력도 허용(자유), 대신 표준 부서만 쓰길 권장
-      await updateDoc(doc(db,"users",id), { deptLeaderOf: arr });
+      try{
+        await updateDoc(doc(db,"users",id), { deptLeaderOf: arr });
+      }catch(e){
+        console.error("[adminSaveLeader] update failed", e);
+        toast(`부서장 저장 실패: ${e?.code||e?.message||e}`,"bad","관리");
+        return;
+      }
       toast("부서장 권한이 저장되었습니다.","good","관리"); setStatus("부서장 권한 저장");
       await loadUsersOnce({force:true, reason:"admin"});
       await renderAdminUserCards();
@@ -3256,4 +3274,3 @@ window.addEventListener("error", (e)=>{
 
 </body>
 </html>
-
