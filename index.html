@@ -483,7 +483,7 @@ let usersPage = 0; // 유저 목록 페이지(10명 단위)
         if (window.CSS && typeof CSS.escape === "function") return CSS.escape(s);
       }catch(_){}
       // fallback: attribute/class selector에서 깨질 수 있는 문자를 백슬래시 이스케이프
-      return s.replace(/[^a-zA-Z0-9_\-]/g, (ch)=>"\"+ch);
+      return s.replace(/[^a-zA-Z0-9_\-]/g, (ch)=>"\\" + ch);
     };
     const setStatus=(msg)=>{ const el=qs("status"); if(!el) return; el.textContent=msg||""; if(msg) setTimeout(()=>{el.textContent="";},1200); };
 
@@ -2765,7 +2765,6 @@ window.addEventListener("unhandledrejection", (e)=>{
 window.addEventListener("error", (e)=>{
   console.error("Global error:", e.message);
 });
-
 </script>
   <!-- BUILD_STAMP 2026-02-20 04:12:27 -->
 </head>
